@@ -363,6 +363,5 @@ __pycache__/
 *.lib
 
 # Executables
-*.exe
 *.out
 *.app
