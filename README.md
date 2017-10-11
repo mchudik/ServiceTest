@@ -13,6 +13,7 @@ Local System account service that is allowed to intract with the desktop. This i
 Information about global memory creation, mapping it, and starting/ending generating frames are logged in the application log of EventViever. 
 
 Use: CppWindowsService.exe -parameter
+
 Parameters:
  -install  to install the service.
  -remove   to remove the service.
@@ -22,4 +23,4 @@ Parameters:
  # GSTesting
  This is a client application that maps the view of the Global memory space of either SendFrame, or Service running project (one at a time)
  After mapping to the memory the data in the memory are read and ingested to GStreamer pipeline that draws the video on the monitor.
- This application should run in the user account space.
+ This application should run in the user account space. It requires GStreamer installation and GSTREAMER_1_0_ROOT_X86 environment variable set and %GSTREAMER_1_0_ROOT_X86%\bin added to the "System" Path variable.
