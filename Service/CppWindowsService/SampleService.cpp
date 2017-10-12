@@ -26,6 +26,7 @@
 #include <conio.h>
 #include <tchar.h>
 #include <aclapi.h>
+#include <sstream>
 
 #define WIDTH 1920
 #define HEIGHT 1080
@@ -37,6 +38,7 @@ HANDLE hMapFile = nullptr;
 HANDLE hToken = nullptr;
 LPCTSTR pBuf = nullptr;
 BYTE pixel = 0;
+BOOL bSendMode = true;
 
 BOOL CreateAndMapSharedMemory(HANDLE *hMapFile, LPCTSTR *pBuf, LPSECURITY_ATTRIBUTES lpAttributes)
 {
@@ -254,6 +256,17 @@ void CSampleService::OnStart(DWORD dwArgc, LPWSTR *lpszArgv)
 	WriteEventLogEntry(L"CppWindowsService in OnStart", 
 		EVENTLOG_INFORMATION_TYPE);
 
+	// Check for startup parameter indicating receiving mode.
+	if (dwArgc > 1) {
+		bSendMode = FALSE;
+		WriteEventLogEntry(L"CppWindowsService Started in a receiving mode", 
+			EVENTLOG_INFORMATION_TYPE);
+	} else {
+		bSendMode = TRUE;
+		WriteEventLogEntry(L"CppWindowsService Started in a send mode",
+			EVENTLOG_INFORMATION_TYPE);
+	}
+
 	// Create and map shared memory
 	if (CreateAndMapSharedMemoryWithSecurity(&hMapFile, &pBuf)) {
 		WriteEventLogEntry(L"CppWindowsService Mapped Memory OK!",
@@ -276,9 +289,12 @@ void CSampleService::OnStart(DWORD dwArgc, LPWSTR *lpszArgv)
 //
 void CSampleService::ServiceWorkerThread(void)
 {
+	TCHAR szRecvBuffer[MAX_PATH] = TEXT("\n");
+
 	// Starting sending the frames
 	if (hMapFile != nullptr && pBuf != nullptr) {
-		WriteEventLogEntry(L"CppWindowsService Starting writing to shared memory",
+		memset((PVOID)pBuf, NULL, BUF_SIZE);
+		WriteEventLogEntry(L"CppWindowsService Starting accessing shared memory",
 			EVENTLOG_INFORMATION_TYPE);
 	}
 
@@ -286,19 +302,30 @@ void CSampleService::ServiceWorkerThread(void)
 	while (!m_fStopping)
 	{
 		// Perform main service function here...
-
-		// Send a frame at a time at FPS framerate
-		if (hMapFile != nullptr && pBuf != nullptr) {
-			memset((PVOID)pBuf, pixel, BUF_SIZE);
-			pixel++;
-			if (pixel == 256) pixel = 0;
+		if (bSendMode) {
+			// Send a frame at a time at FPS framerate
+			if (hMapFile != nullptr && pBuf != nullptr) {
+				memset((PVOID)pBuf, pixel, BUF_SIZE);
+				pixel++;
+				if (pixel == 256) pixel = 0;
+			}
 			Sleep(FPS);
+		} else {
+			// Receive and read data at predefined rate
+			if (hMapFile != nullptr && pBuf != nullptr) {
+				if (pBuf[0] != NULL) {
+					wsprintf(szRecvBuffer, L"Received Buffer [%d]", (BYTE)pBuf[0]);
+					WriteEventLogEntry(szRecvBuffer, EVENTLOG_INFORMATION_TYPE);
+				}
+				memset((PVOID)pBuf, NULL, BUF_SIZE);
+			}
+			Sleep(5000);
 		}
 	}
 
 	// Ending sending the frames
 	if (hMapFile != nullptr && pBuf != nullptr) {
-		WriteEventLogEntry(L"CppWindowsService Ending writing to shared memory",
+		WriteEventLogEntry(L"CppWindowsService Ending accessing to shared memory",
 			EVENTLOG_INFORMATION_TYPE);
 	}
 

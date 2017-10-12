@@ -222,6 +222,7 @@ int main(int argc, char *argv[]) {
 	CustomData data;
 	GstBus *bus;
 	HANDLE hMapFile;
+	BYTE pixel = 0;
 
 	LPCTSTR lpszPrivilege = TEXT("SeCreateGlobalPrivilege");
 	// Change this BOOL value to set/unset the SE_PRIVILEGE_ENABLED attribute
@@ -248,32 +249,44 @@ int main(int argc, char *argv[]) {
 	if (!MapSharedMemory(&hMapFile, &pBuf))
 		return 1;
 
-	/* Initialize cumstom data structure */
-	memset(&data, 0, sizeof(data));
+	if (argc > 1) {
+		// Sending mode
+		while (TRUE) {
+			if (hMapFile != NULL && pBuf != NULL) {
+				memset((PVOID)pBuf, pixel, buffer_size);
+				pixel++;
+				if (pixel == 256) pixel = 0;
+			}
+			Sleep(1000);
+		}
+	} else {
+		/* Initialize cumstom data structure */
+		memset(&data, 0, sizeof(data));
 
-	/* Initialize GStreamer */
-	gst_init(&argc, &argv);
+		/* Initialize GStreamer */
+		gst_init(&argc, &argv);
 
-	/* Create the playbin element */
-	data.pipeline = gst_parse_launch("playbin uri=appsrc://", NULL);
-	g_signal_connect(data.pipeline, "source-setup", G_CALLBACK(source_setup), &data);
+		/* Create the playbin element */
+		data.pipeline = gst_parse_launch("playbin uri=appsrc://", NULL);
+		g_signal_connect(data.pipeline, "source-setup", G_CALLBACK(source_setup), &data);
 
-	/* Instruct the bus to emit signals for each received message, and connect to the interesting signals */
-	bus = gst_element_get_bus(data.pipeline);
-	gst_bus_add_signal_watch(bus);
-	g_signal_connect(G_OBJECT(bus), "message::error", (GCallback)error_cb, &data);
-	gst_object_unref(bus);
+		/* Instruct the bus to emit signals for each received message, and connect to the interesting signals */
+		bus = gst_element_get_bus(data.pipeline);
+		gst_bus_add_signal_watch(bus);
+		g_signal_connect(G_OBJECT(bus), "message::error", (GCallback)error_cb, &data);
+		gst_object_unref(bus);
 
-	/* Start playing the pipeline */
-	gst_element_set_state(data.pipeline, GST_STATE_PLAYING);
+		/* Start playing the pipeline */
+		gst_element_set_state(data.pipeline, GST_STATE_PLAYING);
 
-	/* Create a GLib Main Loop and set it to run */
-	data.main_loop = g_main_loop_new(NULL, FALSE);
-	g_main_loop_run(data.main_loop);
+		/* Create a GLib Main Loop and set it to run */
+		data.main_loop = g_main_loop_new(NULL, FALSE);
+		g_main_loop_run(data.main_loop);
 
-	/* Free resources */
-	gst_element_set_state(data.pipeline, GST_STATE_NULL);
-	gst_object_unref(data.pipeline);
+		/* Free resources */
+		gst_element_set_state(data.pipeline, GST_STATE_NULL);
+		gst_object_unref(data.pipeline);
+	}
 
 	// Free the memory mapping
 	UnMapSharedMemory(hMapFile, pBuf);
