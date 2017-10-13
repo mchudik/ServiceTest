@@ -24,3 +24,11 @@ Parameters:
  This is a client application that maps the view of the Global memory space of either SendFrame, or Service running project (one at a time)
  After mapping to the memory the data in the memory are read and ingested to GStreamer pipeline that draws the video on the monitor.
  This application should run in the user account space. It requires GStreamer installation and GSTREAMER_1_0_ROOT_X86 environment variable set and %GSTREAMER_1_0_ROOT_X86%\bin added to the "System" Path variable.
+
+ # Data Flow
+ Both the Service and GSTesting projects take command line arguments during startup to indicate data flow between them. 
+ If no arguments are passed into them, than the data is flowing from the Service to GSTesting app, and resulting frames are presented in the window.
+ If command line arguments (any) are detected during startup, then the flow is reversed, in the direction from the user app, GSTesting to the Service.
+ The Service just logs the frame number every 5 seconds to the event viewer, as it is lacking GStreamer pipeline to process the incoming data.
+ The memory is allocated by the service in both cases.
+ 
